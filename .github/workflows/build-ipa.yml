@@ -13,18 +13,22 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up Theos Environment
-        uses: theos/setup-theos@v1
+      - name: Setup System Dependencies
+        run: |
+          brew install dpkg ldid
+
+      - name: Setup Theos Environment
+        uses: beerpiss/theos-action@v1
         with:
-          theos-version: 'master'
+          theos-src: "https://github.com/theos/theos"
 
       - name: Fetch Decrypted Instagram & Build
         run: |
           # 1. Download clean decrypted Instagram base app
           curl -L -o instagram.ipa "https://pub-db7fbc0a417349bdaaa75968ff2572cb.r2.dev/Instagram_latest_decrypted.ipa"
           
-          # 2. Compile the tweak binaries using the official environment configuration
-          make clean package FINALPACKAGE=1 SYSROOT=$THEOS/sdks/iPhoneOS16.5.sdk
+          # 2. Compile the tweak binaries using the framework layout
+          make clean package FINALPACKAGE=1
           
           # 3. Setup the payload injection structure
           mkdir -p payload_dir
