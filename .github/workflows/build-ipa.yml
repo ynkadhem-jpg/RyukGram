@@ -13,34 +13,18 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Set up Theos Environment
+        uses: theos/setup-theos@v1
         with:
-          xcode-version: 'latest'
-
-      - name: Install Dependencies & Theos
-        run: |
-          brew install dpkg ldid
-          
-          # Clone Theos safely into the workspace
-          git clone --recursive https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos
-          
-          # Download the 16.2 SDK headers directly via Git to completely avoid format/tar extraction crashes
-          git clone https://github.com/theos/sdks.git target_sdks
-          mkdir -p $GITHUB_WORKSPACE/theos/sdks
-          cp -r target_sdks/iPhoneOS16.2.sdk $GITHUB_WORKSPACE/theos/sdks/
-          
-          # Force the environment variables to stick across all steps perfectly
-          echo "THEOS=$GITHUB_WORKSPACE/theos" >> $GITHUB_ENV
-          echo "PATH=$GITHUB_WORKSPACE/theos/bin:$PATH" >> $GITHUB_ENV
+          theos-version: 'master'
 
       - name: Fetch Decrypted Instagram & Build
         run: |
           # 1. Download clean decrypted Instagram base app
           curl -L -o instagram.ipa "https://pub-db7fbc0a417349bdaaa75968ff2572cb.r2.dev/Instagram_latest_decrypted.ipa"
           
-          # 2. Compile the tweak binaries
-          make clean package FINALPACKAGE=1
+          # 2. Compile the tweak binaries using the official environment configuration
+          make clean package FINALPACKAGE=1 SYSROOT=$THEOS/sdks/iPhoneOS16.5.sdk
           
           # 3. Setup the payload injection structure
           mkdir -p payload_dir
