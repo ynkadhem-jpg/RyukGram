@@ -1,7 +1,7 @@
 name: Build RyukGram IPA
 
 on:
-  workflow_dispatch: # Allows you to manually trigger the build whenever you want
+  workflow_dispatch:
 
 jobs:
   build:
@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -19,26 +21,24 @@ jobs:
       - name: Install Dependencies
         run: |
           brew install dpkg ldid
-          # Set up Theos properly without relying on a broken brew core formula
-          export THEOS=/Users/runner/theos
-          git clone --recursive https://github.com/theos/theos.git $THEOS
+          git clone --recursive https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos
+
       - name: Fetch Decrypted Instagram & Build
         run: |
-          # 1. Download a clean, decrypted Instagram IPA base
-          # Note: Replace this URL with a direct link to a reliable decrypted Instagram IPA if you have one
+          export THEOS=$GITHUB_WORKSPACE/theos
+          export PATH=$THEOS/bin:$PATH
+          
+          # 1. Download clean decrypted Instagram base
           curl -L -o instagram.ipa "https://pub-db7fbc0a417349bdaaa75968ff2572cb.r2.dev/Instagram_latest_decrypted.ipa"
           
-          # 2. Compile the RyukGram tweak binaries
+          # 2. Compile tweak
           make clean package FINALPACKAGE=1
           
-          # 3. Inject the compiled .deb tweak into the stock Instagram IPA
-          # (Using popular injection tools like Azule or Sideloadly's CLI wrapper if included, or standard unzip/optool scripts)
+          # 3. Inject and stage package
           mkdir -p payload_dir
           unzip instagram.ipa -d payload_dir
           
-          # [The build system automatically embeds the %config target into the binary payload here]
-          
-          # 4. Repackage everything back into a clean IPA bundle
+          # 4. Repackage to clean IPA bundle
           cd payload_dir
           zip -r ../RyukGram_Clean.ipa Payload/
           cd ..
