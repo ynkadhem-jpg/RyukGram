@@ -1,27 +1,57 @@
-name: Build RyukGram IPA
+name: Build IPA
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Build and Inject Tweak into IPA
-        uses: swaggyP36000/TweakInstaller-Action@main
-        with:
-          decrypted_ipa_url: "https://pub-db7fbc0a417349bdaaa75968ff2572cb.r2.dev/Instagram_latest_decrypted.ipa"
-          tweak_type: "theos"
-          sdk_version: "16.2"
+      - name: Select latest Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
 
-      - name: Upload Clean IPA Artifact
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods
+
+      - name: Install Pods
+        run: |
+          pod install || true
+
+      - name: Build app
+        run: |
+          xcodebuild \
+          -workspace RyukGram.xcworkspace \
+          -scheme RyukGram \
+          -configuration Release \
+          -sdk iphoneos \
+          -derivedDataPath build \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGN_IDENTITY="" \
+          PROVISIONING_PROFILE="" \
+          ONLY_ACTIVE_ARCH=NO \
+          clean build
+
+      - name: Create Payload
+        run: |
+          mkdir -p Payload
+          # Explicitly targets the clean build directory we specified above
+          APP=$(find build/Build/Products/Release-iphoneos/ -name "*.app" | head -n 1)
+          cp -R "$APP" Payload/
+
+      - name: Zip IPA
+        run: |
+          zip -r RyukGram.ipa Payload
+
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: RyukGram-Sideload-IPA
-          path: main_output/*.ipa
+          name: RyukGram-IPA
+          path: RyukGram.ipa
