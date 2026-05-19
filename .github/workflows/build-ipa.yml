@@ -24,29 +24,36 @@ jobs:
 
       - name: Fetch Decrypted Instagram & Build
         run: |
-          # 1. Download clean decrypted Instagram base app
+          # Use compatible SDK target
+          export TARGET=iphone:clang:latest:15.0
+
+          # Download decrypted Instagram IPA
           curl -L -o instagram.ipa "https://pub-db7fbc0a417349bdaaa75968ff2572cb.r2.dev/Instagram_latest_decrypted.ipa"
-          
-          # 2. Compile the tweak binaries using the framework layout
+
+          # Build tweak
           make clean package FINALPACKAGE=1
-          
-          # 3. Setup the payload injection structure
+
+          # Extract IPA
           mkdir -p payload_dir
-          unzip instagram.ipa -d payload_dir
-          
-          # 4. Bind the tweak logic into the primary application layer
+          unzip -q instagram.ipa -d payload_dir
+
+          # Inject dylib
           if [ -f .theos/obj/debug/RyukGram.dylib ]; then
-            cp .theos/obj/debug/RyukGram.dylib payload_dir/Payload/Instagram.app/
-            ldid -S payload_dir/Payload/Instagram.app/RyukGram.dylib
+            cp .theos/obj/debug/RyukGram.dylib payload_dir/Payload/Instagram.app/RyukGram.dylib
           elif [ -f .theos/obj/RyukGram.dylib ]; then
-            cp .theos/obj/RyukGram.dylib payload_dir/Payload/Instagram.app/
-            ldid -S payload_dir/Payload/Instagram.app/RyukGram.dylib
+            cp .theos/obj/RyukGram.dylib payload_dir/Payload/Instagram.app/RyukGram.dylib
+          else
+            echo "RyukGram.dylib not found!"
+            exit 1
           fi
+
+          # Sign binaries
+          ldid -S payload_dir/Payload/Instagram.app/RyukGram.dylib
           ldid -S payload_dir/Payload/Instagram.app/Instagram
-          
-          # 5. Package it all up securely
+
+          # Repack IPA
           cd payload_dir
-          zip -r ../RyukGram_Clean.ipa Payload/
+          zip -qr ../RyukGram_Clean.ipa Payload
           cd ..
 
       - name: Upload Clean IPA Artifact
