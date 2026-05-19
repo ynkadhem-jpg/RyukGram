@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-13
 
     steps:
       - name: Checkout Code
@@ -13,47 +13,15 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Build and Inject Tweak into IPA
+        uses: swaggyP36000/TweakInstaller-Action@main
         with:
-          xcode-version: '15.2'
-
-      - name: Install System Dependencies
-        run: |
-          brew install dpkg ldid
-
-      - name: Set up Theos and iOS SDK
-        uses: ImS66/setup-theos@v1.2.1
-        with:
-          theos-version: 'master'
-          sdk-version: '16.2'
-
-      - name: Fetch Decrypted Instagram, Compile & Inject
-        run: |
-          # 1. Download clean decrypted Instagram base
-          curl -L -o instagram.ipa "https://pub-db7fbc0a417349bdaaa75968ff2572cb.r2.dev/Instagram_latest_decrypted.ipa"
-          
-          # 2. Compile tweak to get the .dylib file
-          make clean package FINALPACKAGE=1
-          
-          # 3. Extract the original IPA
-          mkdir -p payload_dir
-          unzip instagram.ipa -d payload_dir
-          
-          # 4. Move the compiled RyukGram dylib into the Instagram app bundle
-          cp .theos/obj/debug/RyukGram.dylib payload_dir/Payload/Instagram.app/
-          
-          # 5. Use ldid to pseudo-sign the injected binary for AltStore/SideStore
-          ldid -S payload_dir/Payload/Instagram.app/RyukGram.dylib
-          ldid -S payload_dir/Payload/Instagram.app/Instagram
-          
-          # 6. Repackage everything back into a clean IPA bundle
-          cd payload_dir
-          zip -r ../RyukGram_Clean.ipa Payload/
-          cd ..
+          decrypted_ipa_url: "https://pub-db7fbc0a417349bdaaa75968ff2572cb.r2.dev/Instagram_latest_decrypted.ipa"
+          tweak_type: "theos"
+          sdk_version: "16.2"
 
       - name: Upload Clean IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: RyukGram-Sideload-IPA
-          path: RyukGram_Clean.ipa
+          path: main_output/*.ipa
