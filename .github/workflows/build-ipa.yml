@@ -18,9 +18,10 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          brew install dpkg theos
-          # Installs any necessary build tools required by the tweak project
-
+          brew install dpkg ldid
+          # Set up Theos properly without relying on a broken brew core formula
+          export THEOS=/Users/runner/theos
+          git clone --recursive https://github.com/theos/theos.git $THEOS
       - name: Fetch Decrypted Instagram & Build
         run: |
           # 1. Download a clean, decrypted Instagram IPA base
